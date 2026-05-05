@@ -11,9 +11,19 @@ public class SurfaceInteractor : MonoBehaviour
     [SerializeField] private Color normalColor = Color.green;
     [SerializeField] private Color hitPointColor = Color.red;
 
+    void Awake()
+    {
+        if (raycastOrigin == null)
+            raycastOrigin = transform;
+    }
+
     public Vector3 GetNormalOfSurface()
     {
-        if (raycastOrigin == null) raycastOrigin = transform;
+        if (raycastOrigin == null)
+        {
+            Debug.LogWarning("[SurfaceInteractor] raycastOrigin is not assigned. Using transform as fallback.");
+            raycastOrigin = transform;
+        }
 
         if (Physics.Raycast(
             raycastOrigin.position, 

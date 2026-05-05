@@ -83,7 +83,7 @@ public class GrenadeInventory : MonoBehaviour
         if (!HasGrenade(currentType))
         {
             var first = slots.FirstOrDefault(s => s.count > 0);
-            currentType = first != null ? first.type : GrenadeType.Fragmentation;
+            currentType = first != null ? first.type : GrenadeType.None;
         }
     }
 

@@ -20,7 +20,16 @@ public class Tracer : MonoBehaviour
         if (lineRenderer == null)
         {
             lineRenderer = gameObject.AddComponent<LineRenderer>();
-            lineRenderer.material = new Material(Shader.Find("Unlit/Color"));
+            
+            Shader tracerShader = Shader.Find("Unlit/Color");
+            if (tracerShader == null)
+            {
+                tracerShader = Shader.Find("Sprites/Default");
+                if (tracerShader == null)
+                    Debug.LogWarning("[Tracer] Could not find a suitable shader. Please assign one manually.");
+            }
+            
+            lineRenderer.material = new Material(tracerShader);
             lineRenderer.positionCount = 2;
             lineRenderer.startWidth = width;
             lineRenderer.endWidth = width;
