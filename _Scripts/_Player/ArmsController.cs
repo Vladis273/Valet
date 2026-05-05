@@ -12,7 +12,6 @@ public class ArmsController : MonoBehaviour
 
     [Header("Movement Rotation Lag")]
     public float dynamicArmsRotationAmount = 3f;
-
     public float dynamicArmsRotationSpeed = 5f;
     public float dynamicArmsReturnSpeed = 4f;
 
@@ -62,6 +61,11 @@ public class ArmsController : MonoBehaviour
     private Transform cameraFollowTransform;
     [HideInInspector] public Animator animator;
     private FollowCamera.CameraFollow cameraFollow;
+    
+    // Кэшированные значения для оптимизации
+    private Vector3 _cachedHorizontalVelocity;
+    private bool _wasGrounded;
+    private float _lastAimBlend;
     #endregion
 
     void Start()
@@ -77,6 +81,10 @@ public class ArmsController : MonoBehaviour
         targetRotation = currentRotation;
         
         weaponController.enabled = true;
+        
+        _cachedHorizontalVelocity = Vector3.zero;
+        _wasGrounded = true;
+        _lastAimBlend = 0f;
     }
 
     void OnEnable()
@@ -92,80 +100,109 @@ public class ArmsController : MonoBehaviour
     void Update()
     {
         bool isAiming = cameraFollow.IsAiming();
+        
+        // Оптимизация: обновляем aimBlend только если изменилось состояние прицеливания
+        if (isAiming ? _lastAimBlend < 0.99f : _lastAimBlend > 0.01f)
+        {
+            float targetAim = isAiming ? 1f : 0f;
+            aimBlend = Mathf.MoveTowards(aimBlend, targetAim, Time.deltaTime * aimBlendSpeed);
+            _lastAimBlend = aimBlend;
+        }
 
         Vector3 currentVelocity = rb != null ? rb.linearVelocity : Vector3.zero;
-        aimBlend = Mathf.Lerp(aimBlend, isAiming ? 1f : 0f, Time.deltaTime * aimBlendSpeed);
+        
+        // Оптимизация: обновляем sway только при изменении скорости
+        bool velocityChanged = Vector3.SqrMagnitude(currentVelocity - _cachedHorizontalVelocity) > 0.01f;
+        if (velocityChanged)
+        {
+            _cachedHorizontalVelocity = currentVelocity;
+            CalculateDynamicArmsRotation(currentVelocity);
+        }
+        
+        bool isGrounded = playerMovement.IsGrounded();
+        if (isGrounded != _wasGrounded || velocityChanged)
+        {
+            _wasGrounded = isGrounded;
+            CalculateJumpSway(currentVelocity.y, isGrounded);
+        }
 
-        CalculateJumpSway(rb);
-        CalculateDynamicArmsRotation();
+        // Объединяем вычисления поворота
+        float totalYaw = movementSway.y + dynamicArmsRotationCurrent;
+        float totalPitch = movementSway.x + jumpSway;
+        float totalRoll = movementSway.z;
+        
+        Quaternion swayRotation = Quaternion.Euler(totalPitch, totalYaw, totalRoll);
 
-        Quaternion swayRotation = Quaternion.Euler(
-            movementSway.x + jumpSway,
-            movementSway.y + dynamicArmsRotationCurrent,
-            movementSway.z
-        );
+        // Оптимизированная физика отдачи (объединённые вычисления)
+        if (recoilPosition.sqrMagnitude > 0.0001f || recoilVelocity.sqrMagnitude > 0.0001f)
+        {
+            Vector3 springForce = -recoilPosition * recoilReturnSpeed;
+            Vector3 dampingForce = -recoilVelocity * recoilDamping;
+            recoilVelocity += (springForce + dampingForce) * Time.deltaTime;
+            recoilPosition += recoilVelocity * Time.deltaTime;
+            recoilPosition.y = Mathf.Clamp(recoilPosition.y, 0f, maxRecoilHeight);
+        }
+        else
+        {
+            recoilPosition = Vector3.zero;
+            recoilVelocity = Vector3.zero;
+        }
 
-        Vector3 targetRecoil = Vector3.zero;
-        Vector3 springForce = (targetRecoil - recoilPosition) * recoilReturnSpeed;
-        Vector3 dampingForce = -recoilVelocity * recoilDamping;
+        if (recoilRotationPosition.sqrMagnitude > 0.0001f || recoilRotationVelocity.sqrMagnitude > 0.0001f)
+        {
+            Vector3 rotSpring = -recoilRotationPosition * recoilRotationReturnSpeed;
+            Vector3 rotDamping = -recoilRotationVelocity * recoilRotationDamping;
+            recoilRotationVelocity += (rotSpring + rotDamping) * Time.deltaTime;
+            recoilRotationPosition += recoilRotationVelocity * Time.deltaTime;
+            recoilRotationPosition.x = Mathf.Min(recoilRotationPosition.x, 0f);
+        }
+        else
+        {
+            recoilRotationPosition = Vector3.zero;
+            recoilRotationVelocity = Vector3.zero;
+        }
 
-        recoilVelocity += (springForce + dampingForce) * Time.deltaTime;
-        recoilPosition += recoilVelocity * Time.deltaTime;
-
-        recoilPosition.y = Mathf.Clamp(recoilPosition.y, 0f, maxRecoilHeight);
-
-        Vector3 targetRotRecoil = Vector3.zero;
-        Vector3 rotSpring = (targetRotRecoil - recoilRotationPosition) * recoilRotationReturnSpeed;
-        Vector3 rotDamping = -recoilRotationVelocity * recoilRotationDamping;
-
-        recoilRotationVelocity += (rotSpring + rotDamping) * Time.deltaTime;
-        recoilRotationPosition += recoilRotationVelocity * Time.deltaTime;
-
-        recoilRotationPosition.x = Mathf.Min(recoilRotationPosition.x, 0f);
-
+        // Финальная композиция вращения
         Quaternion finalRotation = currentRotation * swayRotation;
-        Quaternion recoilRotation = Quaternion.Euler(recoilRotationPosition);
-        transform.rotation = finalRotation * recoilRotation;
+        transform.rotation = finalRotation * Quaternion.Euler(recoilRotationPosition);
 
+        // Плавное следование за камерой
         targetRotation = cameraFollowTransform.rotation;
         currentRotation = Quaternion.Slerp(currentRotation, targetRotation, rotationLagSpeed * Time.deltaTime);
 
+        // Позиция рук
         Vector3 effectiveAimOffset = aimOffset;
         effectiveAimOffset.x = 0f;
 
         Vector3 currentArmsOffset = Vector3.Lerp(armsOffset, effectiveAimOffset, aimBlend);
         Vector3 finalArmsOffset = currentArmsOffset + recoilPosition;
-        Vector3 basePosition = cameraFollowTransform.position + cameraFollowTransform.TransformDirection(finalArmsOffset);
-        Vector3 poseOffsetVector = cameraFollowTransform.up * currentPoseOffset;
-
-        transform.position = basePosition + poseOffsetVector + movementSway * 0.1f;
-
+        transform.position = cameraFollowTransform.position + 
+                            cameraFollowTransform.TransformDirection(finalArmsOffset) + 
+                            cameraFollowTransform.up * currentPoseOffset + 
+                            movementSway * 0.1f;
     }
 
-    void CalculateJumpSway(Rigidbody rb)
+    void CalculateJumpSway(float verticalVelocity, bool isGrounded)
     {
-        bool isGrounded = playerMovement.IsGrounded();
-
-        if (!isGrounded && rb.linearVelocity.y > 0.1f)
-            jumpSway = Mathf.Lerp(jumpSway, jumpSwayAmount, Time.deltaTime * jumpSwaySpeed);
-        else
-            jumpSway = Mathf.Lerp(jumpSway, 0f, Time.deltaTime * jumpSwaySpeed);
+        float targetJumpSway = (!isGrounded && verticalVelocity > 0.1f) ? jumpSwayAmount : 0f;
+        jumpSway = Mathf.MoveTowards(jumpSway, targetJumpSway, Time.deltaTime * jumpSwaySpeed);
     }
 
-    void CalculateDynamicArmsRotation()
+    void CalculateDynamicArmsRotation(Vector3 currentVelocity)
     {
-        Vector3 horizontalVelocity = rb != null ? rb.linearVelocity : Vector3.zero;
+        Vector3 horizontalVelocity = currentVelocity;
         horizontalVelocity.y = 0f;
 
-        if (horizontalVelocity.magnitude > 0.1f)
+        if (horizontalVelocity.sqrMagnitude > 0.01f)
         {
             Vector3 moveDirection = horizontalVelocity.normalized;
             Vector3 localMoveDir = cameraFollowTransform.InverseTransformDirection(moveDirection);
 
-            dynamicArmsRotationTarget = -localMoveDir.x * dynamicArmsRotationAmount;
-
-            dynamicArmsRotationTarget = Mathf.Clamp(dynamicArmsRotationTarget,
-                -dynamicArmsRotationAmount, dynamicArmsRotationAmount);
+            dynamicArmsRotationTarget = Mathf.Clamp(
+                -localMoveDir.x * dynamicArmsRotationAmount,
+                -dynamicArmsRotationAmount, 
+                dynamicArmsRotationAmount
+            );
         }
         else
         {
@@ -175,7 +212,7 @@ public class ArmsController : MonoBehaviour
         float speed = Mathf.Abs(dynamicArmsRotationTarget) > 0.1f ?
             dynamicArmsRotationSpeed : dynamicArmsReturnSpeed;
 
-        dynamicArmsRotationCurrent = Mathf.Lerp(dynamicArmsRotationCurrent,
+        dynamicArmsRotationCurrent = Mathf.MoveTowards(dynamicArmsRotationCurrent,
             dynamicArmsRotationTarget, Time.deltaTime * speed);
     }
 
