@@ -30,9 +30,16 @@ public class WeaponInventory : MonoBehaviour
             emptySlot = activeSlotIndex;
             if (weaponSlots[emptySlot].weaponInstance != null)
             {
-                var prefab = weaponSlots[activeSlotIndex].weaponInstance.GetComponent<ArmsController>();
-                GameObject droppedGun = Instantiate(prefab.dropPrefab, dropPos, dropRot);
-                droppedGun.GetComponent<WeaponPickup>().ammoCount = prefab.GetComponentInChildren<WeaponComponentsTransform>().controller.currentAmmo;
+                var armsController = weaponSlots[activeSlotIndex].weaponInstance.GetComponent<ArmsController>();
+                if (armsController != null && armsController.dropPrefab != null)
+                {
+                    var weaponComponentsTransform = armsController.GetComponentInChildren<WeaponComponentsTransform>();
+                    if (weaponComponentsTransform != null && weaponComponentsTransform.controller != null)
+                    {
+                        GameObject droppedGun = Instantiate(armsController.dropPrefab, dropPos, dropRot);
+                        droppedGun.GetComponent<WeaponPickup>().ammoCount = weaponComponentsTransform.controller.currentAmmo;
+                    }
+                }
                 Destroy(weaponSlots[emptySlot].weaponInstance);
             }
         }

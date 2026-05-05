@@ -71,6 +71,13 @@ namespace FollowCamera
 
             playerInput = GetComponentInParent<PlayerInput>();
             playerCamera = GetComponent<Camera>();
+            
+            if (playerBody == null)
+            {
+                playerBody = transform.parent;
+                Debug.LogWarning("[CameraFollow] playerBody was not assigned, using transform.parent as fallback.");
+            }
+            
             playerStateProvider = playerBody.GetComponent<IPlayerStateProvider>();
             playerMovement = playerBody.GetComponent<PlayerMovement>();
 

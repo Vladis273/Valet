@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-public class WeaponPart_AutomaticCycliceShotgun : WeaponController
+public class WeaponPart_AutomaticCyclicalShotgun : WeaponController
 {
     public bool canInterruptReload = true;
     public float shellReloadTime = 0.8f;

@@ -20,7 +20,7 @@ public static class PlayerControls
     public static bool FirePressed => Input.GetMouseButtonDown(0);
     public static bool Aim => Input.GetMouseButton(1);
     public static bool Reload => Input.GetKeyDown(KeyCode.R);   // начало перезарядки
-    public static bool InspectOrChangeHold => Input.GetKey(KeyCode.R);  // удержание R
+    public static bool InspectOrChangeHold => Input.GetKey(KeyCode.LeftAlt);  // удержание Alt (R зарезервирован для перезарядки)
     public static bool CycleFireMode => Input.GetKeyDown(KeyCode.B);
 
     // Слоты

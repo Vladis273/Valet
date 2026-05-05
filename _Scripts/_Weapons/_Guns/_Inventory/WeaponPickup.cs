@@ -13,7 +13,7 @@ public class WeaponPickup : MonoBehaviour, IInteractable
     public void OnHoldInteract(PlayerInteractor interactor)
     {
         WeaponInventory inventory = interactor.GetComponentInParent<WeaponInventory>();
-        if (inventory == null && !inventory.CanPickUpWeapon()) return;
+        if (inventory == null || !inventory.CanPickUpWeapon()) return;
 
         inventory.PickUpWeapon(weaponPrefab, ammoCount, transform.position, transform.rotation);
         Destroy(gameObject);
