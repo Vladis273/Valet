@@ -58,17 +58,6 @@ public class WeaponData : ScriptableObject
     public int magazineCapacity = 30;
     public int maxReserveAmmo = 120;
     
-    [Header("Visual Effects")]
-    public GameObject shellPrefab;
-    public Transform ejectPoint;
-    public float shellForce = 5f;
-    public float shellUpward = 2f;
-    public GameObject tracerPrefab;
-    public Color tracerColor = Color.yellow;
-    public float tracerWidth = 0.05f;
-    public float tracerLifetime = 0.2f;
-    public float tracerFadeSpeed = 0.5f;
-    
     [Header("UI")]
     public float hintDisplayTime = 2f;
     

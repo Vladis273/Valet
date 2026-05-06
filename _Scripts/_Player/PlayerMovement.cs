@@ -327,27 +327,44 @@ public class PlayerMovement : MonoBehaviour, IPlayerStateProvider
     {
         if (currentLadderZone == null) return;
 
+        // Проверяем, может ли игрок войти на лестницу из текущей позиции
+        if (!currentLadderZone.CanEnterFromPosition(transform.position))
+        {
+            Debug.LogWarning("[PlayerMovement] Игрок слишком далеко от точки входа на лестницу");
+            return;
+        }
+
         SetPose(PlayerPose.Stand);
         isOnLadder = true;
         rb.useGravity = false;
         ToggleWeaponModels(false);
 
         rb.linearVelocity = Vector3.zero;
-        transform.position += Vector3.up * currentLadderZone.enterLiftHeight;
+        
+        // Плавное перемещение в точку входа
+        Vector3 enterPos = currentLadderZone.GetEnterPosition();
+        transform.position = enterPos;
 
-        Vector3 forward = currentLadderZone.GetLadderForward();
-        transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+        // Поворот игрока в направлении взгляда на лестнице
+        Vector3 lookDir = currentLadderZone.GetClimbLookDirection();
+        transform.rotation = Quaternion.LookRotation(lookDir, Vector3.up);
     }
 
     void HandleLadderMovement()
     {
         if (currentLadderZone == null) return;
 
-        (Vector3 bottom, Vector3 top) = GetLadderBounds();
+        Vector3 bottom = currentLadderZone.GetEnterPosition();
+        Vector3 top = currentLadderZone.GetExitPosition();
+        
         Vector3 ladderDir = (top - bottom).normalized;
         float ladderLength = Vector3.Distance(bottom, top);
 
-        if (ladderLength < 0.1f) return;
+        if (ladderLength < 0.1f)
+        {
+            ExitLadder();
+            return;
+        }
 
         float verticalInput = input.moveInput.y;
         Vector3 pos = transform.position;
@@ -356,34 +373,36 @@ public class PlayerMovement : MonoBehaviour, IPlayerStateProvider
         float targetDist = currentDist + verticalInput * ladderSpeed * Time.fixedDeltaTime;
         float clampedDist = Mathf.Clamp(targetDist, 0f, ladderLength);
 
+        // Позиция вдоль лестницы
         Vector3 newPos = bottom + ladderDir * clampedDist;
+        
+        // Небольшое смещение к лестнице для лучшего визуала
+        Vector3 lookDir = currentLadderZone.GetClimbLookDirection();
+        newPos += lookDir * 0.3f;
+        
         transform.position = newPos;
         rb.linearVelocity = Vector3.zero;
 
-        HandleLadderExitConditions(clampedDist, verticalInput, ladderLength, top, ladderDir);
-    }
-
-    private (Vector3 bottom, Vector3 top) GetLadderBounds()
-    {
-        Vector3 bottom = currentLadderZone.bottomPoint?.position ?? currentLadderZone.transform.position;
-        Vector3 top = currentLadderZone.topPoint?.position ??
-                     bottom + currentLadderZone.transform.up * 3f;
-        return (bottom, top);
+        HandleLadderExitConditions(clampedDist, verticalInput, ladderLength, top, lookDir);
     }
 
     private void HandleLadderExitConditions(float clampedDist, float verticalInput,
-        float ladderLength, Vector3 top, Vector3 ladderDir)
+        float ladderLength, Vector3 top, Vector3 lookDir)
     {
+        // Выход снизу
         if (clampedDist <= 0.01f && verticalInput < 0f)
         {
+            // Смещаем игрока назад от лестницы при выходе
+            transform.position = currentLadderZone.GetEnterPosition() - lookDir * 0.8f;
             ExitLadder();
             return;
         }
 
+        // Выход сверху
         if (clampedDist >= ladderLength - 0.01f && verticalInput > 0f)
         {
-            Vector3 forward = currentLadderZone.GetLadderForward();
-            transform.position = top + forward * 0.5f;
+            // Плавный выход на верхнюю платформу
+            transform.position = top - lookDir * 0.5f + Vector3.up * 0.1f;
             ExitLadder();
         }
     }

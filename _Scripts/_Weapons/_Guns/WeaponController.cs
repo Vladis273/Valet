@@ -14,9 +14,6 @@ public abstract class WeaponController : MonoBehaviour
     [Header("Core References")]
     [Tooltip("Данные оружия из ScriptableObject - обязательно для настройки")]
     public WeaponData weaponData;
-    
-    [Tooltip("Точка вылета пуль")]
-    public Transform firePoint;
     #endregion
 
     #region Runtime State
@@ -50,6 +47,7 @@ public abstract class WeaponController : MonoBehaviour
     protected UniText _ammoHint;
     protected Animator _animator;
     protected FollowCamera.CameraFollow _cameraFollow;
+    protected WeaponComponentsTransform _componentsTransform;
     #endregion
 
     #region Cached Data from ScriptableObject
@@ -73,33 +71,21 @@ public abstract class WeaponController : MonoBehaviour
     protected float _reloadTimeTactical;
     protected float _hintDisplayTime;
     protected List<FireMode> _availableFireModes;
-    
-    // Visual effects
-    protected GameObject _shellPrefab;
-    protected Transform _ejectPoint;
-    protected float _shellForce;
-    protected float _shellUpward;
-    protected GameObject _tracerPrefab;
-    protected Color _tracerColor;
-    protected float _tracerWidth;
-    protected float _tracerLifetime;
-    protected float _tracerFadeSpeed;
-    protected bool _useShells;
     #endregion
 
     #region Unity Lifecycle
     protected virtual void Awake()
     {
         // Кэшируем компоненты
-        var componentsTransform = GetComponentInParent<WeaponComponentsTransform>();
-        if (componentsTransform == null)
+        _componentsTransform = GetComponentInParent<WeaponComponentsTransform>();
+        if (_componentsTransform == null)
         {
             Debug.LogError($"[WeaponController] WeaponComponentsTransform not found on {gameObject.name}");
             enabled = false;
             return;
         }
         
-        _dynamicArms = componentsTransform.armController;
+        _dynamicArms = _componentsTransform.armController;
         _animator = GetComponentInParent<Animator>();
         _recoilCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
@@ -212,18 +198,6 @@ public abstract class WeaponController : MonoBehaviour
         
         // UI
         _hintDisplayTime = weaponData.hintDisplayTime;
-        
-        // Visual effects
-        _shellPrefab = weaponData.shellPrefab;
-        _ejectPoint = weaponData.ejectPoint;
-        _shellForce = weaponData.shellForce;
-        _shellUpward = weaponData.shellUpward;
-        _tracerPrefab = weaponData.tracerPrefab;
-        _tracerColor = weaponData.tracerColor;
-        _tracerWidth = weaponData.tracerWidth;
-        _tracerLifetime = weaponData.tracerLifetime;
-        _tracerFadeSpeed = weaponData.tracerFadeSpeed;
-        _useShells = weaponData.shellPrefab != null;
     }
     #endregion
 
@@ -286,7 +260,7 @@ public abstract class WeaponController : MonoBehaviour
     /// </summary>
     protected virtual Vector3 GetFireDirection(float spreadAngle)
     {
-        Vector3 baseDirection = firePoint.forward;
+        Vector3 baseDirection = _componentsTransform.firePoint.forward;
 
         // Первые выстрелы без разброса
         if (_shotsFired < GetAccurateShotsCount()) 
@@ -297,8 +271,8 @@ public abstract class WeaponController : MonoBehaviour
         float randomRadius = Mathf.Sqrt(Random.Value) * spreadAngle;
         float spreadRad = randomRadius * Mathf.Deg2Rad;
 
-        Vector3 right = firePoint.right;
-        Vector3 up = firePoint.up;
+        Vector3 right = _componentsTransform.firePoint.right;
+        Vector3 up = _componentsTransform.firePoint.up;
 
         float cos = Mathf.Cos(randomAngle);
         float sin = Mathf.Sin(randomAngle);
@@ -314,7 +288,7 @@ public abstract class WeaponController : MonoBehaviour
     /// </summary>
     protected virtual void PerformHitScan(Vector3 direction)
     {
-        Vector3 startPoint = firePoint.position;
+        Vector3 startPoint = _componentsTransform.firePoint.position;
         
         if (Physics.Raycast(startPoint, direction, out RaycastHit hit, _range))
         {
@@ -427,18 +401,18 @@ public abstract class WeaponController : MonoBehaviour
     #region Visual Effects
     protected virtual void EjectShell()
     {
-        if (!_useShells || _shellPrefab == null || _ejectPoint == null) return;
+        if (_componentsTransform.shellPrefab == null || _componentsTransform.ejectPoint == null) return;
 
-        GameObject shell = Instantiate(_shellPrefab, _ejectPoint.position, _ejectPoint.rotation);
+        GameObject shell = Instantiate(_componentsTransform.shellPrefab, _componentsTransform.ejectPoint.position, _componentsTransform.ejectPoint.rotation);
         Rigidbody rb = shell.GetComponent<Rigidbody>();
         
         if (rb != null)
         {
-            Vector3 direction = _ejectPoint.right * Random.Range(0.5f, 1.0f)
-                              + _ejectPoint.up * Random.Range(0.3f, 0.7f)
-                              + (-_ejectPoint.forward) * Random.Range(0.2f, 0.5f);
+            Vector3 direction = _componentsTransform.ejectPoint.right * Random.Range(0.5f, 1.0f)
+                              + _componentsTransform.ejectPoint.up * Random.Range(0.3f, 0.7f)
+                              + (-_componentsTransform.ejectPoint.forward) * Random.Range(0.2f, 0.5f);
 
-            rb.AddForce(direction * _shellForce + Vector3.up * _shellUpward, ForceMode.Impulse);
+            rb.AddForce(direction * _componentsTransform.shellForce + Vector3.up * _componentsTransform.shellUpward, ForceMode.Impulse);
             rb.AddTorque(Random.insideUnitSphere * 5f, ForceMode.Impulse);
         }
 
@@ -447,17 +421,17 @@ public abstract class WeaponController : MonoBehaviour
 
     protected virtual void CreateTracer(Vector3 start, Vector3 end)
     {
-        if (_tracerPrefab == null) return;
+        if (_componentsTransform.tracerPrefab == null) return;
         
-        GameObject tracerObj = Instantiate(_tracerPrefab, start, Quaternion.identity);
+        GameObject tracerObj = Instantiate(_componentsTransform.tracerPrefab, start, Quaternion.identity);
         Tracer tracer = tracerObj.GetComponent<Tracer>();
 
-        tracer?.Initialize(start, end, _tracerColor, _tracerWidth);
+        tracer?.Initialize(start, end, _componentsTransform.tracerColor, _componentsTransform.tracerWidth);
         
         if (tracer != null)
         {
-            tracer.lifetime = _tracerLifetime;
-            tracer.fadeSpeed = _tracerFadeSpeed;
+            tracer.lifetime = _componentsTransform.tracerLifetime;
+            tracer.fadeSpeed = _componentsTransform.tracerFadeSpeed;
         }
     }
     #endregion
