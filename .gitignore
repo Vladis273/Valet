@@ -1,36 +1,43 @@
 ```
-# Unity-specific ignores
+# Unity specific ignores
 Library/
 Temp/
 Obj/
 Build/
-Logs/
-*.unityproj
-*.sln
-*.csproj
-*.user
-*.userprefs
-*.pidb
-*.suo
-*.lock
-*.meta
-
-# Build results
-[Bb]uild/
-[Bb]uilds/
-[Ll]ocal[Cc]ache/
-
-# Unity generated files
+Builds/
 *.unitypackage
-Assets/AssetStoreTools*
-
-# Visual Studio
+*.meta
+*.pidb
+*.userprefs
+*.sln.DotSettings
+*.csproj.DotSettings
+*.user
 *.userosscache
 *.unity-test-report
 
-# Rider
-.idea/
+# Compiled and build artifacts
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.exe.meta
+*.dll.meta
 
-# Compiled Assembly info
-Generated/
+# Dependencies
+Packages/
+ProjectSettings/
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
 ```
