@@ -1,0 +1,16 @@
+{
+    "name": "Tests.Runtime",
+    "rootNamespace": "Tests.Runtime",
+    "references": [
+        "Tests.Editor"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
