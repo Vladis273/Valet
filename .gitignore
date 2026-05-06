@@ -1,26 +1,36 @@
 ```
-# Unity specific ignores
+# Unity-specific ignores
 Library/
 Temp/
 Obj/
 Build/
-Builds/
+Logs/
 *.unityproj
 *.sln
+*.csproj
 *.user
 *.userprefs
 *.pidb
-*.booproj
-*.svd
-*.pdb
+*.suo
+*.lock
 *.meta
-*.log
-csc.rsp
-.mdb
-.vs/
+
+# Build results
+[Bb]uild/
+[Bb]uilds/
+[Ll]ocal[Cc]ache/
+
+# Unity generated files
+*.unitypackage
+Assets/AssetStoreTools*
+
+# Visual Studio
+*.userosscache
+*.unity-test-report
+
+# Rider
 .idea/
 
-# Test artifacts
-Assets/Tests/Runtime/*.log
-Assets/Tests/Runtime/__pycache__/
+# Compiled Assembly info
+Generated/
 ```

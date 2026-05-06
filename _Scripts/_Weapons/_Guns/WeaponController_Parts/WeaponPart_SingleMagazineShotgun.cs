@@ -1,20 +1,30 @@
 using UnityEngine;
 
+/// <summary>
+/// Контроллер однозарядного магазинного дробовика
+/// Перезаряжается полным магазином за один раз
+/// </summary>
 public class WeaponPart_SingleMagazineShotgun : WeaponController
 {
-    public bool canInterruptReload = true;
-    public float shellReloadTime = 0.8f;
-    private float nextTimeToFire = 0f;
+    [Header("Pellet Settings")]
+    public int pelletsPerShot = 8;
+    public float shotgunSpread = 15f;
+    
+    private float _nextTimeToFire;
 
-    protected new void Start() => base.Start();
+    protected override void Start()
+    {
+        base.Start();
+    }
 
     protected override void Fire()
     {
-        if (currentAmmo <= 0) return;
+        if (_currentAmmo <= 0) return;
 
-        currentAmmo--;
+        _currentAmmo--;
         TryShowAmmoHint();
 
+        // Выпускаем все дробины залпом
         for (int i = 0; i < pelletsPerShot; i++)
         {
             Vector3 direction = GetFireDirection(shotgunSpread);
@@ -22,21 +32,21 @@ public class WeaponPart_SingleMagazineShotgun : WeaponController
         }
 
         EjectShell();
-        shotsFired++;
+        _shotsFired++;
         ApplyRecoil();
 
-        nextTimeToFire = Time.time + fireInterval;
+        _nextTimeToFire = Time.time + _fireInterval;
     }
 
     protected override void ShouldFire()
     {
-        bool isFiring = playerInput.firePressed && Time.time >= nextTimeToFire;
+        bool isFiring = _playerInput?.firePressed == true && Time.time >= _nextTimeToFire;
 
         if (isFiring)
         {
             Fire();
-            nextTimeToFire = Time.time + fireInterval;
-            lastFireTime = Time.time;
+            _nextTimeToFire = Time.time + _fireInterval;
+            _lastFireTime = Time.time;
         }
     }
 }

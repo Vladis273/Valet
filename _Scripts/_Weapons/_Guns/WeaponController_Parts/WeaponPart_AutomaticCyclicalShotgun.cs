@@ -1,22 +1,37 @@
 using UnityEngine;
 using System.Collections;
 
+/// <summary>
+/// Контроллер автоматического дробовика с покадровой перезарядкой
+/// Поддерживает прерывание перезарядки при нажатии огня
+/// </summary>
 public class WeaponPart_AutomaticCyclicalShotgun : WeaponController
 {
+    [Header("Shotgun Settings")]
     public bool canInterruptReload = true;
     public float shellReloadTime = 0.8f;
-    private float nextTimeToFire = 0f;
-    private int burstShotsRemaining = 0;
+    
+    [Header("Pellet Settings")]
+    public int pelletsPerShot = 8;
+    public float shotgunSpread = 15f;
+    
+    private float _nextTimeToFire;
+    private int _burstShotsRemaining;
+    private Coroutine _shellReloadCoroutine;
 
-    protected new void Start() => base.Start();
+    protected override void Start()
+    {
+        base.Start();
+    }
 
     protected override void Fire()
     {
-        if (currentAmmo <= 0) return;
+        if (_currentAmmo <= 0) return;
 
-        currentAmmo--;
+        _currentAmmo--;
         TryShowAmmoHint();
 
+        // Выпускаем все дробины залпом
         for (int i = 0; i < pelletsPerShot; i++)
         {
             Vector3 direction = GetFireDirection(shotgunSpread);
@@ -24,75 +39,80 @@ public class WeaponPart_AutomaticCyclicalShotgun : WeaponController
         }
 
         EjectShell();
-        shotsFired++;
+        _shotsFired++;
         ApplyRecoil();
 
-        if (currentFireMode == FireMode.Burst)
-            burstShotsRemaining--;
+        if (_currentFireMode == FireMode.Burst)
+            _burstShotsRemaining--;
     }
 
     protected override void ShouldFire()
     {
-        if (isReloading && canInterruptReload && playerInput.firePressed)
+        // Прерываем перезарядку при нажатии огня
+        if (_isReloading && canInterruptReload && _playerInput?.firePressed == true)
+        {
             InterruptReload();
+        }
 
         bool isFiring = false;
-        float currectInterval = fireInterval;
+        float currentInterval = _fireInterval;
 
-        switch (currentFireMode)
+        switch (_currentFireMode)
         {
             case FireMode.Single:
-                isFiring = playerInput.firePressed && Time.time >= nextTimeToFire;
+                isFiring = _playerInput?.firePressed == true && Time.time >= _nextTimeToFire;
                 break;
+                
             case FireMode.Burst:
-                if (burstShotsRemaining <= 0 && playerInput.firePressed)
+                if (_burstShotsRemaining <= 0 && _playerInput?.firePressed == true)
                 {
-                    burstShotsRemaining = burstLength;
+                    _burstShotsRemaining = _burstLength;
                     isFiring = true;
-                    currectInterval = burstInterval;
+                    currentInterval = _burstInterval;
                 }
-                else if (Time.time >= nextTimeToFire && burstShotsRemaining > 0)
+                else if (Time.time >= _nextTimeToFire && _burstShotsRemaining > 0)
                 {
                     isFiring = true;
-                    currectInterval = burstInterval;
+                    currentInterval = _burstInterval;
                 }
                 break;
+                
             case FireMode.Auto:
-                isFiring = playerInput.fireHeld && Time.time >= nextTimeToFire;
+                isFiring = _playerInput?.fireHeld == true && Time.time >= _nextTimeToFire;
                 break;
         }
 
         if (isFiring)
         {
             Fire();
-            nextTimeToFire = Time.time + currectInterval;
-            lastFireTime = Time.time;
+            _nextTimeToFire = Time.time + currentInterval;
+            _lastFireTime = Time.time;
         }
     }
 
-
     protected override void StartReload()
     {
-        isReloading = true;
-        currentSpread = 0f;
-        shotsFired = 0;
+        _isReloading = true;
+        _currentSpread = 0f;
+        _shotsFired = 0;
 
-        string reloadAnim = (currentAmmo == 0) ? "LoadShell" : "Reload";
-        animator.SetTrigger(reloadAnim);
+        string reloadAnim = (_currentAmmo == 0) ? "LoadShell" : "Reload";
+        _animator?.SetTrigger(reloadAnim);
 
-        reloadCoroutine = StartCoroutine(ReloadShellRoutine());
+        _shellReloadCoroutine = StartCoroutine(ReloadShellRoutine());
+        
+        EventBus.InvokeReloadStarted(weaponData);
     }
 
     private IEnumerator ReloadShellRoutine()
     {
-        while (currentAmmo < maxAmmo)
+        while (_currentAmmo < _maxAmmo)
         {
             yield return new WaitForSeconds(shellReloadTime);
 
-            currentAmmo++;
-
-            Debug.Log($"1 loaded, Ammo: {currentAmmo}");
-            TryShowAmmoHint();
+            _currentAmmo++;
+            
+            EventBus.InvokeAmmoChanged(weaponData, _currentAmmo, _maxAmmo);
         }
 
         FinishReload();
@@ -100,35 +120,34 @@ public class WeaponPart_AutomaticCyclicalShotgun : WeaponController
 
     private void InterruptReload()
     {
-        if (reloadCoroutine != null)
+        if (_shellReloadCoroutine != null)
         {
-            StopCoroutine(reloadCoroutine);
-            reloadCoroutine = null;
+            StopCoroutine(_shellReloadCoroutine);
+            _shellReloadCoroutine = null;
         }
 
-        isReloading = false;
-        Debug.Log("Reload interrupted");
+        _isReloading = false;
         TryShowAmmoHint();
     }
 
     protected override void FinishReload()
     {
-        isReloading = false;
-        isTacticalReload = false;
-        reloadCoroutine = null;
-
+        _isReloading = false;
+        _shellReloadCoroutine = null;
+        
         TryShowAmmoHint();
+        EventBus.InvokeReloadCompleted(weaponData);
     }
 
     protected override void OnDisable()
     {
-        if (reloadCoroutine != null)
+        if (_shellReloadCoroutine != null)
         {
-            StopCoroutine(reloadCoroutine);
-            reloadCoroutine = null;
+            StopCoroutine(_shellReloadCoroutine);
+            _shellReloadCoroutine = null;
         }
 
-        isReloading = false;
+        _isReloading = false;
 
         base.OnDisable();
     }
