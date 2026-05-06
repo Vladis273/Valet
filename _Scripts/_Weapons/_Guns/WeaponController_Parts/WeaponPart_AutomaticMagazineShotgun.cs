@@ -1,19 +1,29 @@
-using UnityEngine;
-
+/// <summary>
+/// Контроллер магазинного дробовика с автоматической стрельбой
+/// Перезаряжается полным магазином за один раз
+/// </summary>
 public class WeaponPart_AutomaticMagazineShotgun : WeaponController
 {
-    private float nextTimeToFire = 0f;
-    private int burstShotsRemaining = 0;
-
-    protected new void Start() => base.Start();
+    [Header("Pellet Settings")]
+    public int pelletsPerShot = 8;
+    public float shotgunSpread = 15f;
     
+    private float _nextTimeToFire;
+    private int _burstShotsRemaining;
+
+    protected override void Start()
+    {
+        base.Start();
+    }
+
     protected override void Fire()
     {
-        if (currentAmmo <= 0) return;
+        if (_currentAmmo <= 0) return;
 
-        currentAmmo--;
+        _currentAmmo--;
         TryShowAmmoHint();
 
+        // Выпускаем все дробины залпом
         for (int i = 0; i < pelletsPerShot; i++)
         {
             Vector3 direction = GetFireDirection(shotgunSpread);
@@ -21,46 +31,48 @@ public class WeaponPart_AutomaticMagazineShotgun : WeaponController
         }
 
         EjectShell();
-        shotsFired++;
+        _shotsFired++;
         ApplyRecoil();
 
-        if (currentFireMode == FireMode.Burst)
-            burstShotsRemaining--;
+        if (_currentFireMode == FireMode.Burst)
+            _burstShotsRemaining--;
     }
 
     protected override void ShouldFire()
     {
         bool isFiring = false;
-        float currectInterval = fireInterval;
+        float currentInterval = _fireInterval;
 
-        switch (currentFireMode)
+        switch (_currentFireMode)
         {
             case FireMode.Single:
-                isFiring = playerInput.firePressed && Time.time >= nextTimeToFire;
+                isFiring = _playerInput?.firePressed == true && Time.time >= _nextTimeToFire;
                 break;
+                
             case FireMode.Burst:
-                if (burstShotsRemaining <= 0 && playerInput.firePressed)
+                if (_burstShotsRemaining <= 0 && _playerInput?.firePressed == true)
                 {
-                    burstShotsRemaining = burstLength;
+                    _burstShotsRemaining = _burstLength;
                     isFiring = true;
-                    currectInterval = burstInterval;
+                    currentInterval = _burstInterval;
                 }
-                else if (Time.time >= nextTimeToFire && burstShotsRemaining > 0)
+                else if (Time.time >= _nextTimeToFire && _burstShotsRemaining > 0)
                 {
                     isFiring = true;
-                    currectInterval = burstInterval;
+                    currentInterval = _burstInterval;
                 }
                 break;
+                
             case FireMode.Auto:
-                isFiring = playerInput.fireHeld && Time.time >= nextTimeToFire;
+                isFiring = _playerInput?.fireHeld == true && Time.time >= _nextTimeToFire;
                 break;
         }
 
         if (isFiring)
         {
             Fire();
-            nextTimeToFire = Time.time + currectInterval;
-            lastFireTime = Time.time;
+            _nextTimeToFire = Time.time + currentInterval;
+            _lastFireTime = Time.time;
         }
     }
 }
