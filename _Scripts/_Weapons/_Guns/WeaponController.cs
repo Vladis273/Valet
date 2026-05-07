@@ -14,9 +14,22 @@ public abstract class WeaponController : MonoBehaviour
     [Header("Core References")]
     [Tooltip("Данные оружия из ScriptableObject - обязательно для настройки")]
     public WeaponData weaponData;
+    public MagazineData magazineData;
     
     [Tooltip("Точка вылета пуль")]
     public Transform firePoint;
+
+    // Visual effects
+    public GameObject _shellPrefab;
+    public Transform _ejectPoint;
+    public float _shellForce;
+    public float _shellUpward;
+    public GameObject _tracerPrefab;
+    public Color _tracerColor;
+    public float _tracerWidth;
+    public float _tracerLifetime;
+    public float _tracerFadeSpeed;
+    public bool _useShells;
     #endregion
 
     #region Runtime State
@@ -73,18 +86,6 @@ public abstract class WeaponController : MonoBehaviour
     protected float _reloadTimeTactical;
     protected float _hintDisplayTime;
     protected List<FireMode> _availableFireModes;
-    
-    // Visual effects
-    protected GameObject _shellPrefab;
-    protected Transform _ejectPoint;
-    protected float _shellForce;
-    protected float _shellUpward;
-    protected GameObject _tracerPrefab;
-    protected Color _tracerColor;
-    protected float _tracerWidth;
-    protected float _tracerLifetime;
-    protected float _tracerFadeSpeed;
-    protected bool _useShells;
     #endregion
 
     #region Unity Lifecycle
@@ -179,7 +180,7 @@ public abstract class WeaponController : MonoBehaviour
         // Basic stats
         _fireInterval = weaponData.FireInterval;
         _burstInterval = weaponData.BurstInterval;
-        _maxAmmo = weaponData.magazineCapacity;
+        _maxAmmo = magazineData.magazineCapacity;
         _reserveAmmo = weaponData.maxReserveAmmo;
         
         // Combat stats
@@ -528,6 +529,13 @@ public abstract class WeaponController : MonoBehaviour
     public int CurrentAmmo => _currentAmmo;
     public int MaxAmmo => _maxAmmo;
     public FireMode CurrentFireMode => _currentFireMode;
+
+// Публичный доступ к текущему патрону для инвентаря
+public int currentAmmo
+{
+    get => _currentAmmo;
+    set => _currentAmmo = Mathf.Clamp(value, 0, _maxAmmo);
+}
 
 /// <summary>
 /// Устанавливает текущее количество патронов (для подбора с земли)
