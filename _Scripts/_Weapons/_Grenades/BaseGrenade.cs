@@ -2,6 +2,7 @@ using UnityEngine;
 
 public enum GrenadeType
 {
+    None,
     Fragmentation,
     Smoke,
     Flashbang,

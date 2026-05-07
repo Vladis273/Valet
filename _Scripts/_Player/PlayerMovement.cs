@@ -328,9 +328,10 @@ public class PlayerMovement : MonoBehaviour, IPlayerStateProvider
         if (currentLadderZone == null) return;
 
         // Проверяем, может ли игрок войти на лестницу из текущей позиции
-        if (!currentLadderZone.CanEnterFromPosition(transform.position))
+        // Учитываем не только дистанцию, но и направление взгляда игрока
+        if (!currentLadderZone.CanEnterFromPosition(transform.position, transform.forward))
         {
-            Debug.LogWarning("[PlayerMovement] Игрок слишком далеко от точки входа на лестницу");
+            Debug.LogWarning("[PlayerMovement] Игрок слишком далеко от точки входа на лестницу или смотрит в другую сторону");
             return;
         }
 
