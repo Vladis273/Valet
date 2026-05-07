@@ -1,61 +1,40 @@
 ```
-# Unity-specific ignores
-Library/
-Temp/
-Obj/
-Build/
-Builds/
-*.unityproj
-*.sln
-*.csproj
-*.user
-*.userprefs
-*.pidb
-*.pdb
-*.meta
-*.log
-csc.rsp
-.mdb
-*.mdb
-*.pidb.meta
-*.prefab.meta
-*.unity.meta
-*.asset.meta
-.vs/
-.vscode/
-
 # Compiled and build artifacts
-*.dll
 *.exe
+*.dll
+*.so
+*.a
+*.obj
+*.out
 *.pdb
-*.mdb
-*.exe.config
-*.userprefs
-*.unity3d
-
+*.ilk
+obj/
+bin/
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+target/
+.gradle/
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.swo
 # Environment
 .env
 .env.local
 .env.*
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# Logs
-*.log
-crashlytics-build.properties
-
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.swp
-*~
+# Editors
+.vscode/
+.idea/
+# Build and distribution
+dist/
+build/
+out/
+release/
+debug/
 ```
