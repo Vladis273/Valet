@@ -59,10 +59,19 @@ public class LadderZone : MonoBehaviour
     /// <summary>
     /// Проверить, может ли игрок войти на лестницу из текущей позиции
     /// </summary>
-    public bool CanEnterFromPosition(Vector3 playerPosition)
+    public bool CanEnterFromPosition(Vector3 playerPosition, Vector3 playerForward)
     {
         float distanceToBottom = Vector3.Distance(playerPosition, GetEnterPosition());
-        return distanceToBottom <= enterRange;
+        if (distanceToBottom > enterRange)
+            return false;
+        
+        // Проверяем, смотрит ли игрок в сторону лестницы
+        Vector3 directionToLadder = (GetEnterPosition() - playerPosition).normalized;
+        float dotProduct = Vector3.Dot(playerForward.normalized, directionToLadder);
+        
+        // Игрок должен смотреть примерно в сторону лестницы (угол меньше 90 градусов)
+        // Допускаем угол до 120 градусов для удобства
+        return dotProduct > -0.5f;
     }
 
     private void OnTriggerEnter(Collider other)

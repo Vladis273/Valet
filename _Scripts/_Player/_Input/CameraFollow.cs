@@ -35,10 +35,17 @@ namespace FollowCamera
         [SerializeField] private bool enableCameraShake = true;
         [SerializeField] private float walkShakeIntensity = 0.02f;
         [SerializeField] private float runShakeIntensity = 0.05f;
+        [SerializeField] private float crouchShakeIntensity = 0.015f;
+        [SerializeField] private float proneShakeIntensity = 0.01f;
         [SerializeField] private float shakeFrequency = 10f;
         [SerializeField] private float landingShakeIntensity = 0.15f;
         [SerializeField] private float landingShakeDuration = 0.3f;
         [SerializeField] private float shakeReduction = 2f;
+        
+        [Header("Recoil Camera Settings")]
+        [SerializeField] private float recoilKickAmount = 0.1f;
+        [SerializeField] private float recoilRotationAmount = 0.5f;
+        [SerializeField] private float recoilLerpSpeed = 8f;
 
         private float xRotation = 0f;
         private Vector2 currentMouseDelta;
@@ -51,6 +58,8 @@ namespace FollowCamera
         [Header("Camera Recoil Settings")]
         private Vector3 recoilOffset;
         private Vector3 recoilVelocity;
+        private float targetRecoilRotationX;
+        private float currentRecoilRotationX;
         [SerializeField] private float recoilReturnSpeed = 6f;
         [SerializeField] private float recoilDamping = 10f;
 
@@ -181,12 +190,14 @@ namespace FollowCamera
             if (!enableCameraShake || playerStateProvider == null)
             {
                 transform.localPosition = defaultLocalPosition;
+                transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
                 return;
             }
 
             bool isGrounded = playerStateProvider.IsGrounded();
             bool isMoving = playerStateProvider.IsMoving();
             bool isRunning = playerStateProvider.IsRunning();
+            PlayerPose currentPose = playerStateProvider.GetCurrentPose();
 
             if (isGrounded && !wasGrounded)
                 landingShakeTimer = landingShakeDuration;
@@ -204,7 +215,7 @@ namespace FollowCamera
 
             if (isMoving && isGrounded)
             {
-                float movementShake = isRunning ? runShakeIntensity : walkShakeIntensity;
+                float movementShake = GetShakeForPose(currentPose, isRunning);
                 shakeIntensity = Mathf.Max(shakeIntensity, movementShake);
             }
 
@@ -224,16 +235,45 @@ namespace FollowCamera
                 cameraShakeOffset = Vector3.Lerp(cameraShakeOffset, Vector3.zero, Time.deltaTime * shakeReduction);
             }
 
-            Vector3 totalShake = cameraShakeOffset;
-
+            // Обработка отдачи камеры
             Vector3 spring = -recoilOffset * recoilReturnSpeed;
             Vector3 damping = -recoilVelocity * recoilDamping;
             recoilVelocity += (spring + damping) * Time.deltaTime;
             recoilOffset += recoilVelocity * Time.deltaTime;
 
-            totalShake += recoilOffset;
+            // Плавное возвращение вращения от отдачи
+            currentRecoilRotationX = Mathf.Lerp(currentRecoilRotationX, targetRecoilRotationX, Time.deltaTime * recoilLerpSpeed);
+            if (Mathf.Abs(targetRecoilRotationX) < 0.01f)
+                targetRecoilRotationX = 0f;
+            if (Mathf.Abs(currentRecoilRotationX) < 0.01f)
+                currentRecoilRotationX = 0f;
+
+            Vector3 totalShake = cameraShakeOffset + recoilOffset;
 
             transform.localPosition = defaultLocalPosition + totalShake;
+            
+            // Применяем вращение от отдачи к камере
+            if (currentRecoilRotationX != 0f)
+            {
+                transform.localRotation = Quaternion.Euler(xRotation + currentRecoilRotationX, 0f, 0f);
+            }
+        }
+
+        private float GetShakeForPose(PlayerPose pose, bool isRunning)
+        {
+            float baseShake = isRunning ? runShakeIntensity : walkShakeIntensity;
+            
+            // Уменьшаем тряску для приседа и положения лежа
+            switch (pose)
+            {
+                case PlayerPose.Crouch:
+                case PlayerPose.AltCrouch:
+                    return baseShake * (crouchShakeIntensity / walkShakeIntensity);
+                case PlayerPose.Prone:
+                    return baseShake * (proneShakeIntensity / walkShakeIntensity);
+                default:
+                    return baseShake;
+            }
         }
 
         private void HandleCursorToggle()
@@ -249,7 +289,14 @@ namespace FollowCamera
 
         public void ApplyRecoilImpulse(Vector2 impulse)
         {
+            // Вертикальная отдача - камера поднимается вверх
+            recoilVelocity.y += impulse.y * recoilKickAmount;
+            
+            // Горизонтальная случайная отдача
             recoilVelocity.x += (Random.value > 0.5f ? 1f : -1f) * impulse.x * 0.5f;
+            
+            // Вращение камеры от отдачи (кик вверх)
+            targetRecoilRotationX -= impulse.y * recoilRotationAmount;
         }
 
         public bool IsAiming() => isAiming;
