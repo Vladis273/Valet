@@ -1,72 +1,43 @@
 ```
-# Compiled files
-*.pyc
-*.class
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.a
-*.out
-
-# Dependencies
-node_modules/
-venv/
-.venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-target/
-.gradle/
+# Unity-specific ignores
+Library/
+Temp/
+Obj/
+Build/
+*.unityproj
+*.sln
+*.userprefs
+*.csproj
+*.pidb
+*.suo
+*.user
+*.userosscache
+*.unity-test-report
+[OutputFile].xml
+build/
+Build/
+*.apk
+*.unitypackage
+Assets/AssetStoreTools*
 
 # Build artifacts
-dist/
-build/
-coverage/
-htmlcov/
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.exe.config
+*.userprefs
 
-# Editor/IDE files
+# Configuration
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
-
-# System files
-.DS_Store
-Thumbs.db
-.env
-.env.local
-*.env.*
 
 # Logs
 *.log
+crashlytics-build.properties
 
-# Coverage
-.coverage
-
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+# Environment
+.env
+.env.local
+*.env*
 ```
