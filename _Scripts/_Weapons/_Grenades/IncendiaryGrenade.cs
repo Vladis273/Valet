@@ -10,6 +10,9 @@ public class IncendiaryGrenade : BaseGrenade
     {
         StartCoroutine(BurnArea());
         Debug.Log("[FIRE] Ignited area!");
+
+        // Вызываем событие взрыва гранаты
+        EventBus.InvokeGrenadeExploded(GrenadeType.Incendiary, transform.position);
     }
 
     System.Collections.IEnumerator BurnArea()
@@ -20,12 +23,11 @@ public class IncendiaryGrenade : BaseGrenade
             Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, damageLayers);
             foreach (Collider col in colliders)
             {
-                /*
                 if (col.TryGetComponent(out IDamageable target))
                 {
-                    target.TakeDamage(damagePerSecond * Time.deltaTime, transform.position);
+                    Vector3 direction = (target as MonoBehaviour).transform.position - transform.position;
+                    target.TakeDamage(damagePerSecond * Time.deltaTime, transform.position, direction.normalized);
                 }
-                */
             }
             yield return null;
             elapsed += Time.deltaTime;

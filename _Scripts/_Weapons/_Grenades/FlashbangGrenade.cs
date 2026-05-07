@@ -10,5 +10,8 @@ public class FlashbangGrenade : BaseGrenade
         GameObject flash = Instantiate(flashLight, transform.position, Quaternion.identity);
         Destroy(flash, flashTime);
         Debug.Log("[FLASHBANG] Blinded enemies!");
+
+        // Вызываем событие взрыва гранаты
+        EventBus.InvokeGrenadeExploded(GrenadeType.Flashbang, transform.position);
     }
 }
