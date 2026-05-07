@@ -1,0 +1,18 @@
+using UnityEngine;
+using LightSide.Core;
+
+public class FlashbangGrenade : BaseGrenade
+{
+    public GameObject flashLight;
+    public float flashTime = 0.25f;
+
+    protected override void OnExplode()
+    {
+        GameObject flash = Instantiate(flashLight, transform.position, Quaternion.identity);
+        Destroy(flash, flashTime);
+        Debug.Log("[FLASHBANG] Blinded enemies!");
+
+        // Вызываем событие взрыва гранаты
+        EventBus.InvokeGrenadeExploded(GrenadeType.Flashbang, transform.position);
+    }
+}
