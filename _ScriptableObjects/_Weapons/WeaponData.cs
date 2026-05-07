@@ -55,8 +55,18 @@ public class WeaponData : ScriptableObject
     public float reloadTimeTactical = 1.8f;
     
     [Header("Ammo")]
-    public int magazineCapacity = 30;
+    public MagazineData magazineData;
     public int maxReserveAmmo = 120;
+    
+    [Header("Reload (Override)")]
+    [Tooltip("Если не задано, используются значения из MagazineData")]
+    public float reloadTimeFullOverride = 0f;
+    [Tooltip("Если не задано, используются значения из MagazineData")]
+    public float reloadTimeTacticalOverride = 0f;
+    
+    [Header("Legacy Support")]
+    [Tooltip("Устаревшее поле, используется только если magazineData не задан")]
+    public int legacyMagazineCapacity = 30;
     
     [Header("UI")]
     public float hintDisplayTime = 2f;

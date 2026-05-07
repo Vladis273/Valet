@@ -166,11 +166,28 @@ public abstract class WeaponController : MonoBehaviour
     /// </summary>
     protected virtual void InitializeFromData()
     {
+        // Magazine & Ammo - приоритет MagazineData, иначе legacy
+        if (weaponData.magazineData != null)
+        {
+            _maxAmmo = weaponData.magazineData.capacity;
+            _reloadTimeFull = weaponData.reloadTimeFullOverride > 0f 
+                ? weaponData.reloadTimeFullOverride 
+                : weaponData.magazineData.reloadTime;
+            _reloadTimeTactical = weaponData.reloadTimeTacticalOverride > 0f 
+                ? weaponData.reloadTimeTacticalOverride 
+                : weaponData.magazineData.tacticalReloadTime;
+        }
+        else
+        {
+            // Legacy support для старых настроек
+            _maxAmmo = weaponData.legacyMagazineCapacity;
+        }
+        
+        _reserveAmmo = weaponData.maxReserveAmmo;
+        
         // Basic stats
         _fireInterval = weaponData.FireInterval;
         _burstInterval = weaponData.BurstInterval;
-        _maxAmmo = weaponData.magazineCapacity;
-        _reserveAmmo = weaponData.maxReserveAmmo;
         
         // Combat stats
         _range = weaponData.range;
@@ -195,10 +212,6 @@ public abstract class WeaponController : MonoBehaviour
         _aimAccurateShotsMultiplier = weaponData.aimAccurateShotsMultiplier;
         _aimSpreadReduction = weaponData.aimSpreadReduction;
         _aimMovementSlowdown = weaponData.aimMovementSlowdown;
-        
-        // Reload
-        _reloadTimeFull = weaponData.reloadTimeFull;
-        _reloadTimeTactical = weaponData.reloadTimeTactical;
         
         // UI
         _hintDisplayTime = weaponData.hintDisplayTime;
