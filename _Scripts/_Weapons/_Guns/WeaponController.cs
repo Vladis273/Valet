@@ -7,6 +7,7 @@ using LightSide.Core;
 /// <summary>
 /// Базовый контроллер оружия с полной поддержкой ScriptableObjects
 /// и оптимизированной архитектурой
+/// Интегрирован с MagazineManager для управления магазинами
 /// </summary>
 public abstract class WeaponController : MonoBehaviour
 {
@@ -53,6 +54,10 @@ public abstract class WeaponController : MonoBehaviour
     // Корутины
     protected Coroutine _reloadCoroutine;
     private AnimationCurve _recoilCurve;
+    
+    // Magazine Manager integration
+    protected MagazineManager.MagazineState _currentMagazineState;
+    protected string _weaponPoolId;
     #endregion
 
     #region Cached References
@@ -137,13 +142,48 @@ public abstract class WeaponController : MonoBehaviour
         // Устанавливаем начальный режим огня
         _currentFireMode = weaponData.defaultFireMode;
         
+        // Генерируем уникальный ID для пула магазинов этого оружия
+        _weaponPoolId = $"{gameObject.name}_{GetInstanceID()}";
+        
+        // Регистрируем пул магазинов для этого оружия
+        InitializeMagazinePool();
+        
         // Инициализируем состояние
-        _currentAmmo = _maxAmmo;
-        _reserveAmmo = weaponData.maxReserveAmmo;
         _shotsFired = 0;
         _currentSpread = 0f;
         _isReloading = false;
         _isAiming = false;
+    }
+    
+    /// <summary>
+    /// Инициализирует пул магазинов для этого оружия через MagazineManager
+    /// </summary>
+    protected virtual void InitializeMagazinePool()
+    {
+        if (MagazineManager.Instance == null)
+        {
+            Debug.LogWarning($"[WeaponController] MagazineManager not found in scene. Using fallback ammo system for {gameObject.name}");
+            _currentAmmo = _maxAmmo;
+            _reserveAmmo = weaponData.maxReserveAmmo;
+            return;
+        }
+        
+        // Регистрируем новый пул с 3 магазинами
+        MagazineManager.Instance.RegisterWeaponPool(_weaponPoolId, magazineData, 3);
+        
+        // Получаем первый магазин как активный
+        _currentMagazineState = MagazineManager.Instance.GetCurrentMagazine(_weaponPoolId);
+        
+        if (_currentMagazineState != null)
+        {
+            _currentAmmo = _currentMagazineState.currentAmmo;
+        }
+        else
+        {
+            _currentAmmo = _maxAmmo;
+        }
+        
+        _reserveAmmo = weaponData.maxReserveAmmo;
     }
 
     protected virtual void Update()
@@ -265,6 +305,28 @@ public abstract class WeaponController : MonoBehaviour
     #endregion
 
     #region Firing System
+    /// <summary>
+    /// Потребляет патрон из текущего магазина
+    /// Возвращает true если патрон был успешно потреблен
+    /// </summary>
+    protected virtual bool ConsumeAmmo(int amount = 1)
+    {
+        if (_currentMagazineState != null)
+        {
+            int consumed = _currentMagazineState.ConsumeAmmo(amount);
+            _currentAmmo = _currentMagazineState.currentAmmo;
+            return consumed >= amount;
+        }
+        
+        // Fallback без MagazineManager
+        if (_currentAmmo >= amount)
+        {
+            _currentAmmo -= amount;
+            return true;
+        }
+        return false;
+    }
+    
     protected virtual void ApplyRecoil()
     {
         Vector2 recoilImpulseLocal = _recoilImpulse;
@@ -370,6 +432,9 @@ public abstract class WeaponController : MonoBehaviour
     /// </summary>
     protected virtual void StartReload()
     {
+        // Нельзя перезаряжаться если магазин полон
+        if (_currentAmmo >= _maxAmmo) return;
+        
         _isReloading = true;
         _currentSpread = 0f;
         _shotsFired = 0;
@@ -395,11 +460,33 @@ public abstract class WeaponController : MonoBehaviour
     /// <summary>
     /// Завершает перезарядку
     /// Логика: при тактической перезарядке сохраняется патрон в патроннике
+    /// Использует MagazineManager для переключения на следующий магазин
     /// </summary>
     protected virtual void FinishReload()
     {
-        // Полная перезарядка магазина
-        _currentAmmo = _maxAmmo;
+        if (MagazineManager.Instance != null && _currentMagazineState != null)
+        {
+            // Если текущий магазин не полон, переключаемся на следующий с максимальным числом патронов
+            if (!_currentMagazineState.isFull)
+            {
+                var nextMagazine = SwitchToBestMagazine();
+                if (nextMagazine != null)
+                {
+                    _currentMagazineState = nextMagazine;
+                    _currentAmmo = _currentMagazineState.currentAmmo;
+                }
+                else
+                {
+                    // Если нет магазинов с патронами, перезаряжаем текущий из резерва
+                    ReloadCurrentMagazineFromReserve();
+                }
+            }
+        }
+        else
+        {
+            // Fallback без MagazineManager - просто заполняем магазин
+            _currentAmmo = _maxAmmo;
+        }
 
         _isReloading = false;
         _reloadCoroutine = null;
@@ -408,6 +495,53 @@ public abstract class WeaponController : MonoBehaviour
         
         // Событие завершения перезарядки
         EventBus.InvokeReloadCompleted(weaponData);
+    }
+    
+    /// <summary>
+    /// Переключается на лучший доступный магазин (с максимальным числом патронов)
+    /// Соответствует ТЗ: выбор магазина с максимальным числом патронов
+    /// </summary>
+    protected MagazineManager.MagazineState SwitchToBestMagazine()
+    {
+        if (MagazineManager.Instance == null || string.IsNullOrEmpty(_weaponPoolId))
+            return null;
+        
+        var pool = MagazineManager.Instance.GetMagazinePool(_weaponPoolId);
+        if (pool == null || pool.magazines.Count == 0)
+            return null;
+        
+        // Находим магазин с максимальным числом патронов (не пустой)
+        MagazineManager.MagazineState bestMagazine = null;
+        int maxAmmoInMag = -1;
+        
+        for (int i = 0; i < pool.magazines.Count; i++)
+        {
+            var mag = pool.magazines[i];
+            if (!mag.isEmpty && mag.currentAmmo > maxAmmoInMag)
+            {
+                maxAmmoInMag = mag.currentAmmo;
+                bestMagazine = mag;
+                pool.activeMagazineIndex = i;
+            }
+        }
+        
+        return bestMagazine;
+    }
+    
+    /// <summary>
+    /// Перезаряжает текущий магазин из резерва боеприпасов
+    /// </summary>
+    protected virtual void ReloadCurrentMagazineFromReserve()
+    {
+        if (_currentMagazineState == null) return;
+        
+        int ammoNeeded = _currentMagazineState.capacity - _currentMagazineState.currentAmmo;
+        if (ammoNeeded <= 0 || _reserveAmmo <= 0) return;
+        
+        int ammoToTransfer = Mathf.Min(ammoNeeded, _reserveAmmo);
+        _currentMagazineState.currentAmmo += ammoToTransfer;
+        _currentAmmo = _currentMagazineState.currentAmmo;
+        _reserveAmmo -= ammoToTransfer;
     }
     #endregion
 
@@ -529,20 +663,35 @@ public abstract class WeaponController : MonoBehaviour
     public int CurrentAmmo => _currentAmmo;
     public int MaxAmmo => _maxAmmo;
     public FireMode CurrentFireMode => _currentFireMode;
+    public int ReserveAmmo => _reserveAmmo;
+    public MagazineManager.MagazineState CurrentMagazineState => _currentMagazineState;
+    public string WeaponPoolId => _weaponPoolId;
 
-// Публичный доступ к текущему патрону для инвентаря
-public int currentAmmo
-{
-    get => _currentAmmo;
-    set => _currentAmmo = Mathf.Clamp(value, 0, _maxAmmo);
-}
+    // Публичный доступ к текущему патрону для инвентаря
+    public int currentAmmo
+    {
+        get => _currentAmmo;
+        set
+        {
+            _currentAmmo = Mathf.Clamp(value, 0, _maxAmmo);
+            // Синхронизируем с магазином если используется MagazineManager
+            if (_currentMagazineState != null)
+            {
+                _currentMagazineState.currentAmmo = _currentAmmo;
+            }
+        }
+    }
 
-/// <summary>
-/// Устанавливает текущее количество патронов (для подбора с земли)
-/// </summary>    
-public void SetCurrentAmmo(int amount)
+    /// <summary>
+    /// Устанавливает текущее количество патронов (для подбора с земли)
+    /// </summary>    
+    public void SetCurrentAmmo(int amount)
     {
         _currentAmmo = Mathf.Clamp(amount, 0, _maxAmmo);
+        if (_currentMagazineState != null)
+        {
+            _currentMagazineState.currentAmmo = _currentAmmo;
+        }
         EventBus.InvokeAmmoChanged(weaponData, _currentAmmo, _maxAmmo);
     }
 
@@ -564,6 +713,18 @@ public void SetCurrentAmmo(int amount)
         int taken = Mathf.Min(needed, _reserveAmmo);
         _reserveAmmo -= taken;
         return taken;
+    }
+    
+    /// <summary>
+    /// Получает состояние магазинов для передачи при дропе оружия
+    /// </summary>
+    public List<MagazineManager.MagazineState> GetAllMagazineStates()
+    {
+        if (MagazineManager.Instance == null || string.IsNullOrEmpty(_weaponPoolId))
+            return null;
+            
+        var pool = MagazineManager.Instance.GetMagazinePool(_weaponPoolId);
+        return pool?.magazines;
     }
     #endregion
 }

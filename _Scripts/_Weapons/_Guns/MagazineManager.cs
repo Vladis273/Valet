@@ -107,6 +107,18 @@ public class MagazineManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Получает пул магазинов для оружия
+    /// </summary>
+    public WeaponMagazinePool GetMagazinePool(string weaponId)
+    {
+        if (!_poolDictionary.TryGetValue(weaponId, out var pool))
+        {
+            return null;
+        }
+        return pool;
+    }
+    
+    /// <summary>
     /// Получает текущий магазин для оружия
     /// </summary>
     public MagazineState GetCurrentMagazine(string weaponId)
