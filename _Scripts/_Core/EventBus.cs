@@ -17,7 +17,6 @@ namespace LightSide.Core
         // События игрока
         public static event System.Action<float> OnPlayerHealthChanged;
         public static event System.Action OnPlayerDied;
-        public static event System.Action<PlayerPose> OnPlayerPoseChanged;
         
         // События гранат
         public static event System.Action<GrenadeType, Vector3> OnGrenadeExploded;
@@ -43,9 +42,6 @@ namespace LightSide.Core
             
         public static void InvokePlayerDied() => 
             OnPlayerDied?.Invoke();
-            
-        public static void InvokePlayerPoseChanged(PlayerPose pose) => 
-            OnPlayerPoseChanged?.Invoke(pose);
             
         public static void InvokeGrenadeExploded(GrenadeType type, Vector3 position) => 
             OnGrenadeExploded?.Invoke(type, position);

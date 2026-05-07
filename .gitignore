@@ -1,78 +1,61 @@
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-*.dll
-*.so
-*.exe
-*.class
-*.out
-*.a
+```
+# Unity-specific ignores
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+*.unityproj
+*.sln
+*.csproj
+*.user
+*.userprefs
+*.pidb
+*.pdb
+*.meta
+*.log
+csc.rsp
+.mdb
+*.mdb
+*.pidb.meta
+*.prefab.meta
+*.unity.meta
+*.asset.meta
+.vs/
+.vscode/
 
-# Dependencies
-node_modules/
-venv/
-.venv/
+# Compiled and build artifacts
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.exe.config
+*.userprefs
+*.unity3d
+
+# Environment
 .env
 .env.local
 .env.*
 
-# Build directories
-dist/
-build/
-target/
-.gradle/
-
-# Python specific
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-.Python
-*.so
-.Pytest_cache/
-.mypy_cache/
-.coverage
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-*.swo
-
-# Editors
-.vscode/
-.idea/
-
-# System files
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Coverage reports
-coverage/
-htmlcov/
+# Logs
+*.log
+crashlytics-build.properties
 
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+```
