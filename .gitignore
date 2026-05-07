@@ -4,40 +4,58 @@ Library/
 Temp/
 Obj/
 Build/
+Builds/
 *.unityproj
 *.sln
-*.userprefs
 *.csproj
-*.pidb
-*.suo
 *.user
-*.userosscache
-*.unity-test-report
-[OutputFile].xml
-build/
-Build/
-*.apk
-*.unitypackage
-Assets/AssetStoreTools*
+*.userprefs
+*.pidb
+*.pdb
+*.unity
+*.meta
+!*.prefab.meta
+!*.unity.meta
+!*.asset.meta
+!*.mat.meta
+!*.anim.meta
+!*.controller.meta
+!*.spriteatlas.meta
+!*.mask.meta
+!*.physicsMaterial2D.meta
+!*.physicsMaterial.meta
+!*.prefab
+!*.unity
+!*.asset
+!*.mat
+!*.anim
+!*.controller
+!*.spriteatlas
+!*.mask
+!*.physicsMaterial2D
+!*.physicsMaterial
 
 # Build artifacts
-*.dll
 *.exe
-*.pdb
-*.mdb
-*.exe.config
-*.userprefs
+*.dll
+*.so
+*.dylib
 
-# Configuration
-.vscode/
-.idea/
+# Environment
+.env
+.env.local
+.env.*
 
 # Logs
 *.log
 crashlytics-build.properties
 
-# Environment
-.env
-.env.local
-*.env*
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 ```
