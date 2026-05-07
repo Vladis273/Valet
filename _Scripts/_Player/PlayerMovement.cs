@@ -1,13 +1,5 @@
 using UnityEngine;
 
-public enum PlayerPose
-{
-    Stand,
-    Crouch,
-    AltCrouch,
-    Prone
-}
-
 [RequireComponent(typeof(Rigidbody)), RequireComponent(typeof(PlayerInput)),
     RequireComponent(typeof(CapsuleCollider)), RequireComponent(typeof(PlayerData))]
 public class PlayerMovement : MonoBehaviour, IPlayerStateProvider

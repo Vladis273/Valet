@@ -41,6 +41,7 @@ public abstract class WeaponController : MonoBehaviour
 
     #region Cached References
     protected PlayerMovement _playerMovement;
+    protected IPlayerStateProvider _playerStateProvider;
     protected ArmsController _dynamicArms;
     protected PlayerInput _playerInput;
     protected UniText _fireModeHint;
@@ -111,6 +112,9 @@ public abstract class WeaponController : MonoBehaviour
             _fireModeHint = _dynamicArms.playerData.fireModeHint;
             _ammoHint = _dynamicArms.playerData.ammoHint;
             _cameraFollow = _dynamicArms.playerData.cameraFollow;
+            
+            // Получаем провайдер состояния игрока для определения позы
+            _playerStateProvider = _playerMovement as IPlayerStateProvider;
         }
 
         // Скрываем подсказки при старте
@@ -247,11 +251,54 @@ public abstract class WeaponController : MonoBehaviour
 
         if (_playerMovement != null && _cameraFollow != null)
         {
-            _cameraFollow.ApplyRecoilImpulse(_recoilImpulse * 0.3f);
+            // Получаем текущую позу игрока для модификации отдачи
+            float poseMultiplier = GetPoseRecoilMultiplier();
+            
+            // Увеличенный множитель отдачи камеры (0.5 вместо 0.3)
+            Vector2 cameraRecoil = _recoilImpulse * 0.5f * poseMultiplier;
+            _cameraFollow.ApplyRecoilImpulse(cameraRecoil);
+            
+            // Добавляем тряску камеры в момент выстрела
+            float shakeIntensity = GetRecoilShakeIntensity(poseMultiplier);
+            _cameraFollow.AddInstantShake(shakeIntensity);
         }
         
         // Событие выстрела
         EventBus.InvokeWeaponFired(weaponData);
+    }
+    
+    /// <summary>
+    /// Возвращает множитель отдачи в зависимости от позы игрока
+    /// </summary>
+    private float GetPoseRecoilMultiplier()
+    {
+        if (_playerStateProvider == null) return 1f;
+        
+        PlayerPose currentPose = _playerStateProvider.GetCurrentPose();
+        
+        switch (currentPose)
+        {
+            case PlayerPose.Prone:
+                // В положении лежа отдача меньше (упор)
+                return 0.6f;
+            case PlayerPose.Crouch:
+            case PlayerPose.AltCrouch:
+                // В приседе отдача средняя
+                return 0.8f;
+            default:
+                // Стоя - полная отдача
+                return 1f;
+        }
+    }
+    
+    /// <summary>
+    /// Возвращает интенсивность тряски камеры при выстреле в зависимости от позы
+    /// </summary>
+    private float GetRecoilShakeIntensity(float poseMultiplier)
+    {
+        // Базовая интенсивность тряски от выстрела
+        float baseShake = 0.08f;
+        return baseShake * poseMultiplier;
     }
 
     /// <summary>

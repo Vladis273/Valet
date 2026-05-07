@@ -67,6 +67,8 @@ namespace FollowCamera
         private Vector3 cameraShakeOffset;
         private float shakeTimer;
         private float landingShakeTimer;
+        private float instantShakeTimer;
+        private float instantShakeIntensity;
         private bool wasGrounded = true;
 
         private PlayerMovement playerMovement;
@@ -204,6 +206,13 @@ namespace FollowCamera
 
             wasGrounded = isGrounded;
 
+            // Обработка мгновенной тряски (от выстрела)
+            if (instantShakeTimer > 0f)
+            {
+                instantShakeTimer -= Time.deltaTime;
+                instantShakeIntensity = Mathf.Lerp(instantShakeIntensity, 0f, Time.deltaTime * 5f);
+            }
+
             float shakeIntensity = 0f;
 
             if (landingShakeTimer > 0f)
@@ -211,6 +220,12 @@ namespace FollowCamera
                 landingShakeTimer -= Time.deltaTime;
                 float landingShakeAmount = (landingShakeTimer / landingShakeDuration) * landingShakeIntensity;
                 shakeIntensity = Mathf.Max(shakeIntensity, landingShakeAmount);
+            }
+
+            // Добавляем мгновенную тряску от выстрела
+            if (instantShakeTimer > 0f)
+            {
+                shakeIntensity = Mathf.Max(shakeIntensity, instantShakeIntensity);
             }
 
             if (isMoving && isGrounded)
@@ -297,6 +312,17 @@ namespace FollowCamera
             
             // Вращение камеры от отдачи (кик вверх)
             targetRecoilRotationX -= impulse.y * recoilRotationAmount;
+        }
+        
+        /// <summary>
+        /// Добавляет мгновенную тряску камеры (например, от выстрела)
+        /// </summary>
+        public void AddInstantShake(float intensity)
+        {
+            if (!enableCameraShake) return;
+            
+            instantShakeIntensity = Mathf.Max(instantShakeIntensity, intensity);
+            instantShakeTimer = 0.15f; // Короткая длительность тряски
         }
 
         public bool IsAiming() => isAiming;
