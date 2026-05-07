@@ -27,9 +27,8 @@ public class WeaponPart_AutomaticCyclicalShotgun : WeaponController
 
     protected override void Fire()
     {
-        if (_currentAmmo <= 0) return;
+        if (!ConsumeAmmo()) return;
 
-        _currentAmmo--;
         TryShowAmmoHint();
 
         // Выпускаем все дробины залпом

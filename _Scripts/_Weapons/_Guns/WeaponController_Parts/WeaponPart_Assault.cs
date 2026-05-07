@@ -20,9 +20,8 @@ public class WeaponPart_Assault : WeaponController
 
     protected override void Fire()
     {
-        if (_currentAmmo <= 0) return;
+        if (!ConsumeAmmo()) return;
 
-        _currentAmmo--;
         TryShowAmmoHint();
 
         Vector3 direction = GetFireDirection(CalculateSpread());

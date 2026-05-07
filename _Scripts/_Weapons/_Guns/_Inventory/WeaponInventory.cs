@@ -36,6 +36,9 @@ public class WeaponInventory : MonoBehaviour
                     var weaponComponentsTransform = armsController.GetComponentInChildren<WeaponComponentsTransform>();
                     if (weaponComponentsTransform != null && weaponComponentsTransform.controller != null)
                     {
+                        // Сохраняем текущее состояние магазина перед дропом
+                        SaveMagazineState(weaponComponentsTransform.controller);
+                        
                         GameObject droppedGun = Instantiate(armsController.dropPrefab, dropPos, dropRot);
                         droppedGun.GetComponent<WeaponPickup>().ammoCount = weaponComponentsTransform.controller.currentAmmo;
                     }
@@ -52,6 +55,18 @@ public class WeaponInventory : MonoBehaviour
         weaponObj.SetActive(false);
 
         SwitchToSlot(emptySlot);
+    }
+
+    /// <summary>
+    /// Сохраняет состояние магазина оружия перед его удалением/дропом
+    /// </summary>
+    private void SaveMagazineState(WeaponController controller)
+    {
+        if (controller == null) return;
+        
+        // MagazineManager автоматически сохраняет состояние в пуле
+        // При создании нового оружия того же типа оно получит тот же пул
+        Debug.Log($"[WeaponInventory] Saved magazine state: {controller.currentAmmo}/{controller.MaxAmmo}");
     }
 
     public void SwitchToSlot(int index)
@@ -80,4 +95,27 @@ public class WeaponInventory : MonoBehaviour
     }
 
     public bool CanPickUpWeapon() => GetEmptySlotIndex() != -1 || weaponSlots.Count < maxWeapons;
+    
+    /// <summary>
+    /// Добавляет магазин в пул оружия (для подбора с тел врагов)
+    /// </summary>
+    public void AddMagazineToWeaponPool(string weaponPoolId, MagazineData magazineData, int ammoInMagazine)
+    {
+        if (MagazineManager.Instance == null) return;
+        
+        var pool = MagazineManager.Instance.GetMagazinePool(weaponPoolId);
+        if (pool == null)
+        {
+            // Если пула нет, создаем новый
+            MagazineManager.Instance.RegisterWeaponPool(weaponPoolId, magazineData, 1);
+            pool = MagazineManager.Instance.GetMagazinePool(weaponPoolId);
+        }
+        
+        // Добавляем новый магазин в пул
+        var newMagazine = new MagazineManager.MagazineState(magazineData.capacity);
+        newMagazine.currentAmmo = Mathf.Clamp(ammoInMagazine, 0, magazineData.capacity);
+        pool.magazines.Add(newMagazine);
+        
+        Debug.Log($"[WeaponInventory] Added magazine to pool {weaponPoolId}: {newMagazine.currentAmmo}/{newMagazine.capacity}");
+    }
 }
